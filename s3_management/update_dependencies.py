@@ -882,9 +882,22 @@ PREVIEW_NUMPY_INDEX_BASE = "https://pypi.anaconda.org"
 PREVIEW_NUMPY_VERSION = "2.6.0"
 
 
+# NVIDIA packages published only to PyPI proper. pypi.nvidia.com 404s for these,
+# so they must be fetched from pypi.org even though they are NVIDIA packages for
+# every other purpose (target filtering, labelling).
+PYPI_HOSTED_NVIDIA_PACKAGES = frozenset(
+    {"cuda-bindings", "cuda-python", "cuda-pathfinder"}
+)
+
+
 def is_nvidia_package(pkg_name: str) -> bool:
-    """Check if a package is from NVIDIA and should use pypi.nvidia.com"""
+    """Check if a package is published by NVIDIA"""
     return pkg_name.startswith("nvidia-") or pkg_name.startswith("cuda-")
+
+
+def is_nvidia_index_package(pkg_name: str) -> bool:
+    """Check if a package is served by pypi.nvidia.com"""
+    return is_nvidia_package(pkg_name) and pkg_name not in PYPI_HOSTED_NVIDIA_PACKAGES
 
 
 def is_amd_package(pkg_name: str) -> bool:
@@ -895,7 +908,7 @@ def is_amd_package(pkg_name: str) -> bool:
 
 def get_package_source_url(pkg_name: str) -> str:
     """Get the source URL for a package based on its type"""
-    if is_nvidia_package(pkg_name):
+    if is_nvidia_index_package(pkg_name):
         return f"https://pypi.nvidia.com/{pkg_name}/"
     if is_amd_package(pkg_name):
         return f"https://repo.amd.com/rocm/whl-multi-arch/{pkg_name}/"
@@ -1106,7 +1119,7 @@ def upload_package_using_simple_index(
     Works for both NVIDIA and non-NVIDIA packages.
     """
     source_url = get_package_source_url(pkg_name)
-    if is_nvidia_package(pkg_name):
+    if is_nvidia_index_package(pkg_name):
         source_label = "NVIDIA"
     elif is_amd_package(pkg_name):
         source_label = "AMD"
